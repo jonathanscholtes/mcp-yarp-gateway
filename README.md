@@ -30,13 +30,13 @@ flowchart TD
     KV["🔐 Azure Key Vault<br/>Proxy API key · Connection strings"]
     COSMOS["☁️ MongoDB (DocumentDB)"]
 
-    subgraph FOUNDRY["Azure AI Foundry"]
-        AGENT["🤖 Foundry Agent<br/>Calls MCP endpoint via proxy"]
+    subgraph FOUNDRY["Microsoft Foundry"]
+        AGENT["🤖 Foundry Agent"]
         TOOL["🔌 Foundry MCP Tool<br/>Custom Tool (Key-based)"]
     end
 
-    subgraph AKS["☸️ AKS Cluster — Namespace: mcp-tools"]
-        YARP["🔀 YARP Proxy<br/>API key auth · Port 8080"]
+    subgraph AKS["☸️ AKS Cluster"]
+        YARP["🔀 YARP Proxy<br/>API key auth · Port 80"]
         MCP["🗄️ MongoDB MCP Server<br/>HTTP transport · Port 3000<br/>Internal ClusterIP only"]
         SEEDER["🌱 Data Seeder<br/>Synthetic data writer"]
     end
@@ -96,7 +96,7 @@ mcp-yarp-gateway/
 │
 ├── k8s/helm/
 │   ├── mcp-tools/                      # Namespace bootstrap (creates mcp-tools namespace)
-│   ├── yarp-proxy/                     # YARP proxy Helm chart (port 8080)
+│   ├── yarp-proxy/                     # YARP proxy Helm chart (port 80)
 │   ├── mongodb-mcp-server/             # MongoDB MCP server chart (internal, port 3000)
 │   ├── data-seeder/                    # Synthetic data seeder chart
 │   └── platform/                       # Shared platform resources

@@ -39,6 +39,7 @@ var app = builder.Build();
 
 app.MapHealthChecks("/healthz");
 app.MapMetrics();
+app.UseHttpMetrics();
 
 app.MapGet("/", () => Results.Ok(new
 {
