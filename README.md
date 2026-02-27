@@ -271,4 +271,14 @@ This project is licensed under the [MIT License](LICENSE.md).
 
 **THIS CODE IS PROVIDED FOR EDUCATIONAL AND DEMONSTRATION PURPOSES ONLY.**
 
-This sample code is not intended for production use and is provided "AS IS", without warranty of any kind. Azure services incur costs — monitor your usage and clean up resources when done. By using this code, you accept full responsibility for any consequences of its use.
+This sample code is not intended for production use and is provided "AS IS", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+
+**Key Points:**
+- This is a **demonstration project** showcasing autonomous agentic architecture patterns
+- **Not intended for production** without significant additional development, testing, and compliance review
+- Calculations are simplified models for demonstration purposes only
+- Users are responsible for ensuring compliance with applicable regulations and security requirements
+- Microsoft Azure services incur costs - monitor your usage and clean up resources when done
+- No warranties or guarantees are provided regarding accuracy, reliability, or suitability for any purpose
+
+By using this code, you acknowledge that you understand these limitations and accept full responsibility for any consequences of its use.
