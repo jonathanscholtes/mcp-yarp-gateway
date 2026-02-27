@@ -96,8 +96,9 @@ Write-Host "[OK] YARP proxy deployed" -ForegroundColor Green
 Write-Host "`n6. Deploying Data Seeder..." -ForegroundColor Magenta
 helm upgrade --install data-seeder .\k8s\helm\data-seeder `
     --namespace tools `
-    --set image.registry=$acrLoginServer `
-    --set image.tag=latest `
+    --set registry=$acrLoginServer `
+    --set image=data-seeder `
+    --set tag=latest `
     --set managedIdentityClientId=$ManagedIdentityClientId `
     --set keyVault.name=$KeyVaultName `
     --set keyVault.tenantId=$tenantId `

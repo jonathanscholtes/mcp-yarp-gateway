@@ -1,7 +1,6 @@
 param location string
 param keyVaultName string
 
-@secure()
 @description('MongoDB admin username')
 param mongoDbUsername string = 'mongoadmin'
 
@@ -12,6 +11,10 @@ param mongoDbPassword string
 @secure()
 @description('MongoDB connection string')
 param mongoDbConnectionString string
+
+@secure()
+@description('API key for the YARP proxy')
+param proxyApiKey string
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName
@@ -71,6 +74,14 @@ resource mongoDbConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2022-0
   name: 'mongodb-connection-string'
   properties: {
     value: mongoDbConnectionString
+  }
+}
+
+resource proxyApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  parent: keyVault
+  name: 'proxy-api-key'
+  properties: {
+    value: proxyApiKey
   }
 }
 

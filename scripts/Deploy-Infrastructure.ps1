@@ -18,7 +18,7 @@ param (
     [string]$ProjectName = "proxy",
     
     [Parameter(Mandatory=$false)]
-    [string]$EnvironmentName = "demo",
+    [string]$EnvironmentName = "demo", 
     
     [Parameter(Mandatory=$false)]
     [string]$ResourceToken
@@ -54,6 +54,10 @@ if (-not $ResourceToken) {
 $mongoAdminPassword = New-SecurePassword -Length 16
 Write-Host "Generated MongoDB admin password (Length: $($mongoAdminPassword.Length))" -ForegroundColor Yellow
 
+# Generate proxy API key
+$proxyApiKey = New-SecurePassword -Length 32
+Write-Host "Generated proxy API key (Length: $($proxyApiKey.Length))" -ForegroundColor Yellow
+
 # Deploy Bicep template
 $deploymentName = "deployment-$ProjectName-$ResourceToken"
 $templateFile = "$PSScriptRoot\..\infra\main.bicep"
@@ -71,6 +75,7 @@ $deploymentOutput = az deployment sub create `
         AIlocation=$AILocation `
         userObjectId=$UserObjectId `
         mongoAdminPassword=$mongoAdminPassword `
+        proxyApiKey=$proxyApiKey `
     --query "properties.outputs" `
     --output json
 
@@ -86,20 +91,7 @@ if (-not $outputs) {
 }
 
 Write-Host "`n[OK] Infrastructure deployed successfully" -ForegroundColor Green
-
-# Generate and store proxy API key in Key Vault
-$keyVaultName = $outputs.keyVaultName.value
-$proxyApiKey = New-SecurePassword -Length 32
-Write-Host "`nStoring proxy-api-key in Key Vault: $keyVaultName" -ForegroundColor Yellow
-az keyvault secret set `
-    --vault-name $keyVaultName `
-    --name "proxy-api-key" `
-    --value $proxyApiKey `
-    --output none
-if ($LASTEXITCODE -ne 0) {
-    throw "Failed to store proxy-api-key in Key Vault '$keyVaultName'"
-}
-Write-Host "[OK] proxy-api-key stored in Key Vault" -ForegroundColor Green
+Write-Host "[OK] proxy-api-key written to Key Vault by Bicep" -ForegroundColor Green
 
 Write-Host "`nDeployment Outputs:" -ForegroundColor Cyan
 Write-Host "  Resource Group: $($outputs.resourceGroupName.value)" -ForegroundColor White

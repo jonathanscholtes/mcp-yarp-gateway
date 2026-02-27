@@ -79,7 +79,8 @@ if ($k8sOutputs.yarpProxyIP) {
         & "$PSScriptRoot\scripts\Deploy-FoundryAgents.ps1" `
             -AiProjectEndpoint $infraOutputs.aiProjectEndpoint `
             -McpProxyUrl       $mcpProxyUrl `
-            -McpApiKey         $mcpApiKey
+            -McpApiKey         $mcpApiKey `
+            -ResourceGroupName $infraOutputs.resourceGroupName
     } catch {
         Write-Host "`n[WARNING] Agent deployment encountered issues: $_" -ForegroundColor Yellow
         Write-Host "Deploy agents manually:" -ForegroundColor Gray
@@ -102,7 +103,7 @@ Write-Host @"
 Write-Host "[OK] Azure Infrastructure deployed"     -ForegroundColor Green
 Write-Host "[OK] Container images built and pushed" -ForegroundColor Green
 Write-Host "[OK] Platform components deployed to AKS" -ForegroundColor Green
-
+Write-Host "[OK] Foundry agents deployed | API Key: $mcpApiKey" -ForegroundColor Green    
 Write-Host "`n=== Service Endpoints ===" -ForegroundColor Cyan
 
 if ($k8sOutputs.grafanaIP) {

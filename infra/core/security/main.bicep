@@ -11,7 +11,19 @@ param location string
 param userObjectId string
 
 @description('AKS Key Vault Secrets Provider identity object ID (optional)')
-param keyVaultSecretsProviderObjectId string = ''
+param aksKeyVaultSecretsProviderPrincipalId string = ''
+
+@secure()
+@description('API key for the YARP proxy')
+param proxyApiKey string
+
+@secure()
+@description('MongoDB admin password')
+param mongoDbPassword string
+
+@secure()
+@description('MongoDB connection string')
+param mongoDbConnectionString string
 
 
 module managedIdentity 'managed-identity.bicep' = {
@@ -27,6 +39,9 @@ module keyVault 'keyvault.bicep' = {
   params: {
     location: location
     keyVaultName: keyVaultName
+    mongoDbPassword: mongoDbPassword
+    mongoDbConnectionString: mongoDbConnectionString
+    proxyApiKey: proxyApiKey
   }
 }
 
@@ -37,7 +52,7 @@ module securiyRoles 'security-roles.bicep' = {
     keyVaultName: keyVaultName
     managedIdentityName: managedIdentityName
     userObjectId: userObjectId
-    keyVaultSecretsProviderObjectId: keyVaultSecretsProviderObjectId
+    aksKeyVaultSecretsProviderPrincipalId: aksKeyVaultSecretsProviderPrincipalId
   }
   dependsOn: [keyVault,managedIdentity]
 }

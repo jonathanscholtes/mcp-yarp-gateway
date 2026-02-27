@@ -5,7 +5,7 @@ param keyVaultName string
 param userObjectId string
 
 @description('AKS Key Vault Secrets Provider identity object ID (optional)')
-param keyVaultSecretsProviderObjectId string = ''
+param aksKeyVaultSecretsProviderPrincipalId string = ''
 
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing= {
   name: managedIdentityName
@@ -20,12 +20,15 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
 // Key Vault Secrets User role
 var keyVaultSecretsUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 
-// Grant user access to read secrets
+// Key Vault Secrets Officer role (allows set/delete in addition to read)
+var keyVaultSecretsOfficerRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+
+// Grant user Secrets Officer access so the deploying user can write secrets (e.g. proxy-api-key)
 resource userSecretReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(userObjectId)) {
-  name: guid(keyVault.id, userObjectId, keyVaultSecretsUserRole)
+  name: guid(keyVault.id, userObjectId, keyVaultSecretsOfficerRole)
   scope: keyVault
   properties: {
-    roleDefinitionId: keyVaultSecretsUserRole
+    roleDefinitionId: keyVaultSecretsOfficerRole
     principalId: userObjectId
     principalType: 'User'
   }
@@ -57,12 +60,12 @@ resource roleUserAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-
 }
 
 // Grant AKS Key Vault Secrets Provider access to Key Vault
-resource kvSecretsProviderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(keyVaultSecretsProviderObjectId)) {
-  name: guid(keyVault.id, keyVaultSecretsProviderObjectId, keyVaultSecretsUserRole)
+resource kvSecretsProviderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aksKeyVaultSecretsProviderPrincipalId)) {
+  name: guid(keyVault.id, aksKeyVaultSecretsProviderPrincipalId, keyVaultSecretsUserRole)
   scope: keyVault
   properties: {
     roleDefinitionId: keyVaultSecretsUserRole
-    principalId: keyVaultSecretsProviderObjectId
+    principalId: aksKeyVaultSecretsProviderPrincipalId
     principalType: 'ServicePrincipal'
   }
 }

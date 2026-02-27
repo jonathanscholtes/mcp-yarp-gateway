@@ -11,7 +11,10 @@ param (
     [string]$McpApiKey = "",
 
     [Parameter(Mandatory=$false)]
-    [string]$ModelDeployment = "gpt-4o"
+    [string]$ModelDeployment = "gpt-4o",
+
+    [Parameter(Mandatory=$false)]
+    [string]$ResourceGroupName = ""
 )
 
 Import-Module "$PSScriptRoot\common\DeploymentFunctions.psm1" -Force
@@ -36,6 +39,38 @@ Write-Host "  Model Deployment  : $ModelDeployment" -ForegroundColor White
 Write-Host "  MCP Proxy URL     : $McpProxyUrl" -ForegroundColor White
 Write-Host "  API Key           : $(if ($McpApiKey) { '***set***' } else { 'NOT SET' })" -ForegroundColor White
 
+# Create AI Foundry connection to store the YARP proxy API key securely
+# The agents API does not allow inline headers - credentials must be in a connection
+$connectionName = "yarp-proxy-mcp"
+if ($McpApiKey -and $ResourceGroupName) {
+    Write-Host "`nCreating AI Foundry connection '$connectionName'..." -ForegroundColor Yellow
+
+    # Extract account name from endpoint hostname: https://<account>.services.ai.azure.com/...
+    $accountName = ([System.Uri]$AiProjectEndpoint).Host.Split('.')[0]
+    $subscriptionId = (az account show --query id -o tsv)
+
+    $connectionBody = @{
+        properties = @{
+            authType    = "ApiKey"
+            category    = "ApiKey"
+            target      = $McpProxyUrl
+            isSharedToAll = $true
+            credentials = @{ key = $McpApiKey }
+        }
+    } | ConvertTo-Json -Depth 5
+
+    $connectionUrl = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.CognitiveServices/accounts/$accountName/connections/${connectionName}?api-version=2025-06-01"
+
+    az rest --method PUT --url $connectionUrl --body $connectionBody --headers "Content-Type=application/json" | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] Connection '$connectionName' created/updated" -ForegroundColor Green
+    } else {
+        Write-Host "  [WARNING] Could not create connection - agents may fail to auth" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "`n[INFO] Skipping connection creation (no API key or resource group provided)" -ForegroundColor Gray
+}
+
 # Verify YARP proxy is running
 Write-Host "`nVerifying YARP proxy pod..." -ForegroundColor Yellow
 $podStatus = kubectl get pods -n tools -l app=yarp-proxy -o jsonpath='{.items[0].status.phase}' 2>$null
@@ -52,7 +87,8 @@ $pythonArgs = @(
     "scripts/deploy_foundry_agents.py",
     "--project-endpoint", $AiProjectEndpoint,
     "--model-deployment", $ModelDeployment,
-    "--mcp-proxy-url", $McpProxyUrl
+    "--mcp-proxy-url", $McpProxyUrl,
+    "--connection-name", $connectionName
 )
 if ($McpApiKey) {
     $pythonArgs += @("--mcp-api-key", $McpApiKey)

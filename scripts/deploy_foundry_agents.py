@@ -22,6 +22,10 @@ Options:
     --mcp-proxy-url     Full MCP endpoint on the YARP proxy, e.g.
                         http://yarp-proxy.mcp-tools.svc.cluster.local/mcp
     --mcp-api-key       Value for the X-Api-Key header the proxy enforces
+    --connection-name   Name of the AI Foundry project connection that stores
+                        the proxy API key (created by Deploy-FoundryAgents.ps1).
+                        When provided, project_connection_id is used on MCPTool
+                        instead of inline headers (required by the agents API).
     --cleanup           Delete existing agent versions before re-creating
 """
 
@@ -44,16 +48,29 @@ class AgentDeployer:
         model_deployment: str,
         mcp_proxy_url: str,
         mcp_api_key: str,
+        connection_name: str = "",
     ):
         self.project_endpoint = project_endpoint
         self.model_deployment = model_deployment
         self.mcp_proxy_url = mcp_proxy_url
         self.mcp_api_key = mcp_api_key
+        self.connection_name = connection_name
 
         self.project_client = AIProjectClient(
             endpoint=project_endpoint,
             credential=DefaultAzureCredential(),
         )
+
+        # Resolve connection ID once if a connection name was supplied
+        self._connection_id: str = ""
+        if connection_name:
+            try:
+                conn = self.project_client.connections.get(connection_name)
+                self._connection_id = conn.id
+                print(f"  [OK] Resolved connection '{connection_name}' -> {self._connection_id}")
+            except Exception as exc:
+                print(f"  [WARN] Could not resolve connection '{connection_name}': {exc}")
+                print("         Falling back to no-auth MCPTool (proxy may reject requests)")
 
         # track created agents for optional cleanup
         self._created: list[Dict] = []
@@ -61,13 +78,25 @@ class AgentDeployer:
     # ── helpers ──────────────────────────────────────────────────────────────
 
     def _mcp_tool(self, label: str) -> MCPTool:
-        """Return an MCPTool pointed at the YARP proxy with auth header."""
-        headers = {"X-Api-Key": self.mcp_api_key} if self.mcp_api_key else {}
+        """Return an MCPTool pointed at the YARP proxy.
+
+        If a project connection ID is available the API key is supplied via
+        project_connection_id (required by the agents plane - inline headers
+        containing sensitive values are rejected).  Falls back to a plain
+        URL-only tool when no connection has been resolved.
+        """
+        if self._connection_id:
+            return MCPTool(
+                server_label=label,
+                server_url=self.mcp_proxy_url,
+                require_approval="never",
+                project_connection_id=self._connection_id,
+            )
+        # No connection - omit auth headers (agents API rejects them)
         return MCPTool(
             server_label=label,
             server_url=self.mcp_proxy_url,
             require_approval="never",
-            headers=headers,
         )
 
     def _create_agent(self, name: str, instructions: str) -> Dict:
@@ -259,7 +288,7 @@ database through the 'mongodb' MCP server.
         print(f"  Project endpoint : {self.project_endpoint}")
         print(f"  Model deployment : {self.model_deployment}")
         print(f"  MCP proxy URL    : {self.mcp_proxy_url}")
-        print(f"  API key header   : {'set' if self.mcp_api_key else 'NOT SET (proxy may reject)'}")
+        print(f"  Connection ID    : {self._connection_id or 'NOT SET (no auth)'}")
         print(f"{_hdr}\n")
 
         results = {}
@@ -320,7 +349,9 @@ def main():
         default="http://yarp-proxy.mcp-tools.svc.cluster.local/mcp",
         help="Full MCP endpoint on the YARP proxy (default: AKS in-cluster URL)")
     parser.add_argument("--mcp-api-key", default="",
-        help="API key value sent in the X-Api-Key header to the YARP proxy")
+        help="API key value (used only if --connection-name is not supplied)")
+    parser.add_argument("--connection-name", default="",
+        help="AI Foundry project connection name that stores the proxy API key")
     parser.add_argument("--cleanup", action="store_true",
         help="Delete created agent versions after deployment (useful for dev iteration)")
 
@@ -331,6 +362,7 @@ def main():
         model_deployment=args.model_deployment,
         mcp_proxy_url=args.mcp_proxy_url,
         mcp_api_key=args.mcp_api_key,
+        connection_name=args.connection_name,
     )
 
     deployer.deploy_all()

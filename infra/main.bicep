@@ -32,6 +32,10 @@ param userObjectId string
 @maxLength(128)
 param mongoAdminPassword string
 
+@secure()
+@description('API key for the YARP proxy')
+param proxyApiKey string
+
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: 'rg-${projectName}-${environmentName}-${location}-${resourceToken}'
   location: location
@@ -81,6 +85,7 @@ module keyVaultModule 'core/security/keyvault.bicep' = {
     mongoDbUsername: data.outputs.mongoDbUsername
     mongoDbPassword: mongoAdminPassword
     mongoDbConnectionString: data.outputs.mongoDbConnectionString
+    proxyApiKey: proxyApiKey
   }
   dependsOn: [data]
 }
@@ -105,7 +110,7 @@ module securityRoles 'core/security/security-roles.bicep' = {
     keyVaultName: 'kv${projectName}${resourceToken}'
     managedIdentityName: 'id-${projectName}-${environmentName}'
     userObjectId: userObjectId
-    keyVaultSecretsProviderObjectId: platform.outputs.keyVaultSecretsProviderObjectId
+    aksKeyVaultSecretsProviderPrincipalId: platform.outputs.keyVaultSecretsProviderObjectId
   }
   dependsOn: [keyVaultModule, managedIdentityModule, platform]
 }
