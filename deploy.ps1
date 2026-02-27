@@ -123,6 +123,26 @@ Write-Host "`nMongoDB MCP Server: internal only (http://mongodb-mcp-server.tools
 Write-Host @"
 
 ============================================================
+  ACTION REQUIRED: Add MCP Tool Connection in Foundry Portal
+============================================================
+"@ -ForegroundColor Yellow
+
+Write-Host "After deployment, add a Custom Keys connection in the Foundry portal:" -ForegroundColor White
+Write-Host ""
+Write-Host "  Portal URL   : $($infraOutputs.aiProjectEndpoint -replace '/api/projects/.*','')" -ForegroundColor Cyan
+Write-Host "  Navigate to  : Your project -> Management -> Connected resources -> + New connection" -ForegroundColor White
+Write-Host ""
+Write-Host "  Connection Name  : yarp-proxy-mcp"                         -ForegroundColor Green
+Write-Host "  Connection Type  : Custom keys"                             -ForegroundColor Green
+Write-Host "  Endpoint URL     : http://$($k8sOutputs.yarpProxyIP)/mcp"  -ForegroundColor Green
+Write-Host "  Key name         : api-key"                                  -ForegroundColor Green
+Write-Host "  Key value        : $mcpApiKey"                              -ForegroundColor Green
+Write-Host ""
+Write-Host "Once the connection is saved, the agents can authenticate to the MCP proxy." -ForegroundColor White
+
+Write-Host @"
+
+============================================================
               Deployment Complete!
 ============================================================
 "@ -ForegroundColor Green

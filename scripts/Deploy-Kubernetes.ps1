@@ -88,6 +88,7 @@ helm upgrade --install yarp-proxy .\k8s\helm\yarp-proxy `
     --set managedIdentityClientId=$ManagedIdentityClientId `
     --set keyVault.name=$KeyVaultName `
     --set keyVault.tenantId=$tenantId `
+    --set proxy.apiKeyHeader=api-key `
     --wait --timeout 10m
 if ($LASTEXITCODE -ne 0) { throw "YARP proxy deployment failed" }
 Write-Host "[OK] YARP proxy deployed" -ForegroundColor Green

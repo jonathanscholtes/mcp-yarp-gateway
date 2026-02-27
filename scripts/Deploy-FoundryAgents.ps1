@@ -39,36 +39,34 @@ Write-Host "  Model Deployment  : $ModelDeployment" -ForegroundColor White
 Write-Host "  MCP Proxy URL     : $McpProxyUrl" -ForegroundColor White
 Write-Host "  API Key           : $(if ($McpApiKey) { '***set***' } else { 'NOT SET' })" -ForegroundColor White
 
-# Create AI Foundry connection to store the YARP proxy API key securely
-# The agents API does not allow inline headers - credentials must be in a connection
+# The AI Foundry connection must be created MANUALLY in the Foundry portal before running this script.
+# The ARM API does not support specifying the HTTP header name alongside the credential value,
+# which is required for Agent Service to inject the correct auth header into MCP requests.
+#
+# Manual steps (one-time, per project):
+#   1. Open Azure AI Foundry portal → your project → Management → Connected resources
+#   2. Click "+ New connection" → choose "Custom keys" (or "Remote MCP Server" if available)
+#   3. Set:
+#        Name            : yarp-proxy-mcp
+#        Endpoint/URL    : $McpProxyUrl
+#        Key name        : api-key          ← this becomes the HTTP header name
+#        Key value       : <proxy API key>
+#   4. Save. The connection only needs to be created once.
+#
 $connectionName = "yarp-proxy-mcp"
-if ($McpApiKey -and $ResourceGroupName) {
-    Write-Host "`nCreating AI Foundry connection '$connectionName'..." -ForegroundColor Yellow
+Write-Host "`n[PREREQ] Foundry connection '$connectionName' must exist (see script comments)." -ForegroundColor Cyan
 
-    # Extract account name from endpoint hostname: https://<account>.services.ai.azure.com/...
+# Verify the connection exists via the project connections API
+try {
+    $token = (az account get-access-token --resource "https://management.azure.com" --query accessToken -o tsv)
     $accountName = ([System.Uri]$AiProjectEndpoint).Host.Split('.')[0]
-    $subscriptionId = (az account show --query id -o tsv)
-
-    $connectionBody = @{
-        properties = @{
-            authType    = "ApiKey"
-            category    = "ApiKey"
-            target      = $McpProxyUrl
-            isSharedToAll = $true
-            credentials = @{ key = $McpApiKey }
-        }
-    } | ConvertTo-Json -Depth 5
-
-    $connectionUrl = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.CognitiveServices/accounts/$accountName/connections/${connectionName}?api-version=2025-06-01"
-
-    az rest --method PUT --url $connectionUrl --body $connectionBody --headers "Content-Type=application/json" | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  [OK] Connection '$connectionName' created/updated" -ForegroundColor Green
-    } else {
-        Write-Host "  [WARNING] Could not create connection - agents may fail to auth" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "`n[INFO] Skipping connection creation (no API key or resource group provided)" -ForegroundColor Gray
+    $projectName  = $AiProjectEndpoint.TrimEnd('/').Split('/')[-1]
+    $checkUrl = "https://${accountName}.services.ai.azure.com/api/projects/${projectName}/connections/${connectionName}?api-version=v1"
+    $connResp = Invoke-RestMethod -Method GET -Uri $checkUrl -Headers @{ Authorization = "Bearer $token" } -ErrorAction Stop
+    Write-Host "  [OK] Connection '$connectionName' verified" -ForegroundColor Green
+} catch {
+    Write-Host "  [WARN] Connection '$connectionName' not found yet - agents will be deployed but auth will fail until the connection is added." -ForegroundColor Yellow
+    Write-Host "         Add it manually in the Foundry portal (see deploy.ps1 summary output for details)." -ForegroundColor Yellow
 }
 
 # Verify YARP proxy is running

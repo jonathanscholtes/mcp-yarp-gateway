@@ -24,8 +24,9 @@ Options:
     --mcp-api-key       Value for the X-Api-Key header the proxy enforces
     --connection-name   Name of the AI Foundry project connection that stores
                         the proxy API key (created by Deploy-FoundryAgents.ps1).
-                        When provided, project_connection_id is used on MCPTool
-                        instead of inline headers (required by the agents API).
+                        Passed directly as project_connection_id on MCPTool;
+                        Agent Service retrieves the key from the connection at
+                        runtime and injects it into MCP requests automatically.
     --cleanup           Delete existing agent versions before re-creating
 """
 
@@ -35,7 +36,7 @@ from typing import Dict
 
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition, MCPTool
+from azure.ai.projects.models import PromptAgentDefinition
 
 
 class AgentDeployer:
@@ -61,43 +62,10 @@ class AgentDeployer:
             credential=DefaultAzureCredential(),
         )
 
-        # Resolve connection ID once if a connection name was supplied
-        self._connection_id: str = ""
-        if connection_name:
-            try:
-                conn = self.project_client.connections.get(connection_name)
-                self._connection_id = conn.id
-                print(f"  [OK] Resolved connection '{connection_name}' -> {self._connection_id}")
-            except Exception as exc:
-                print(f"  [WARN] Could not resolve connection '{connection_name}': {exc}")
-                print("         Falling back to no-auth MCPTool (proxy may reject requests)")
-
         # track created agents for optional cleanup
         self._created: list[Dict] = []
 
     # ── helpers ──────────────────────────────────────────────────────────────
-
-    def _mcp_tool(self, label: str) -> MCPTool:
-        """Return an MCPTool pointed at the YARP proxy.
-
-        If a project connection ID is available the API key is supplied via
-        project_connection_id (required by the agents plane - inline headers
-        containing sensitive values are rejected).  Falls back to a plain
-        URL-only tool when no connection has been resolved.
-        """
-        if self._connection_id:
-            return MCPTool(
-                server_label=label,
-                server_url=self.mcp_proxy_url,
-                require_approval="never",
-                project_connection_id=self._connection_id,
-            )
-        # No connection - omit auth headers (agents API rejects them)
-        return MCPTool(
-            server_label=label,
-            server_url=self.mcp_proxy_url,
-            require_approval="never",
-        )
 
     def _create_agent(self, name: str, instructions: str) -> Dict:
         agent = self.project_client.agents.create_version(
@@ -105,7 +73,6 @@ class AgentDeployer:
             definition=PromptAgentDefinition(
                 model=self.model_deployment,
                 instructions=instructions,
-                tools=[self._mcp_tool("mongodb")],
             ),
         )
         self._created.append({"name": agent.name, "version": agent.version})
@@ -125,7 +92,8 @@ You are ContractAnalyst, a portfolio analyst with read access to a MongoDB datab
 through the 'mongodb' MCP server.
 
 ## Connection
-- Call connect() if no active connection is shown, then proceed.
+- The MongoDB connection is pre-configured on the server via environment variable.
+- Do NOT call connect() with a connection string — just use the database tools directly.
 - Target database: contracts_db
 - Primary collection: contracts
 
@@ -176,7 +144,8 @@ You are RiskMemoInvestigator, a risk analyst with read access to a MongoDB datab
 through the 'mongodb' MCP server.
 
 ## Connection
-- Call connect() if no active connection is shown, then proceed.
+- The MongoDB connection is pre-configured on the server via environment variable.
+- Do NOT call connect() with a connection string — just use the database tools directly.
 - Target database: contracts_db
 - Primary collection: risk_memos
 - Secondary collection: contracts
@@ -232,7 +201,8 @@ You are MarketDataSurveillance, a quantitative analyst with read access to a Mon
 database through the 'mongodb' MCP server.
 
 ## Connection
-- Call connect() if no active connection is shown, then proceed.
+- The MongoDB connection is pre-configured on the server via environment variable.
+- Do NOT call connect() with a connection string — just use the database tools directly.
 - Target database: contracts_db
 - Primary collection: market_data
 
@@ -287,8 +257,6 @@ database through the 'mongodb' MCP server.
         print(_hdr)
         print(f"  Project endpoint : {self.project_endpoint}")
         print(f"  Model deployment : {self.model_deployment}")
-        print(f"  MCP proxy URL    : {self.mcp_proxy_url}")
-        print(f"  Connection ID    : {self._connection_id or 'NOT SET (no auth)'}")
         print(f"{_hdr}\n")
 
         results = {}
@@ -313,9 +281,11 @@ database through the 'mongodb' MCP server.
         print("  Next steps")
         print(_hdr)
         print("  1. Ensure mongo-data-generator has seeded data into contracts_db")
-        print("  2. Ensure MongoDB MCP server is running with --transport http")
-        print("  3. Ensure YARP proxy is forwarding /mcp/* to MongoDB MCP server")
-        print("  4. Test interactively via Notebook/01_azure_ai_agent-mcp.ipynb")
+        print("  2. In the Foundry portal, add the MCP tool to each agent:")
+        print("       Tool type  : Remote MCP Server")
+        print("       URL        : http://<yarp-proxy-ip>/mcp")
+        print("       Connection : yarp-proxy-mcp  (Custom Keys, api-key header)")
+        print("  3. Test interactively via Notebook/01_azure_ai_agent-mcp.ipynb")
         print()
 
         return results

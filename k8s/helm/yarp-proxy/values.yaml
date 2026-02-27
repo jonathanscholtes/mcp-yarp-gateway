@@ -18,8 +18,9 @@ keyVault:
   tenantId: ""                # --set keyVault.tenantId=<tenant-id>
 
 # Proxy settings — mirror of appsettings.json Proxy section
+# Agent Service injects credentials from an ApiKey connection using the 'api-key' header
 proxy:
-  apiKeyHeader: "X-API-Key"
+  apiKeyHeader: "api-key"
   upstreamTimeoutMinutes: "10"
   # apiKey is pulled from Key Vault secret "proxy-api-key"
 

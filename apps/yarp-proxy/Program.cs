@@ -91,7 +91,8 @@ static bool FixedTimeEquals(string left, string right)
 
 internal sealed class ProxySettings
 {
-	public string ApiKeyHeader { get; set; } = "X-API-Key";
+	// Agent Service injects credentials from an ApiKey connection using the 'api-key' header.
+	public string ApiKeyHeader { get; set; } = "api-key";
 	public string ApiKey { get; set; } = string.Empty;
 	public int UpstreamTimeoutMinutes { get; set; } = 10;
 }
