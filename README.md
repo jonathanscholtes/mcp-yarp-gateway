@@ -27,22 +27,27 @@ This project secures and standardizes MCP HTTP traffic on AKS using a YARP rever
 
 ```mermaid
 flowchart TD
-    AGENT["🤖 Azure AI Foundry Agent<br/>Calls MCP endpoint via proxy"]
-    YARP["🔀 YARP Proxy<br/>AKS · API key auth · Port 8080"]
-    MCP["🗄️ MongoDB MCP Server<br/>AKS · HTTP transport · Port 3000<br/>Internal ClusterIP only"]
-    COSMOS["☁️ Azure Cosmos DB<br/>for MongoDB (DocumentDB)"]
-    SEEDER["🌱 Data Seeder<br/>AKS · Synthetic data writer"]
     KV["🔐 Azure Key Vault<br/>Proxy API key · Connection strings"]
-    AKS["☸️ AKS Cluster<br/>Namespace: mcp-tools"]
+    COSMOS["☁️ MongoDB (DocumentDB)"]
 
-    AGENT -->|"MCP HTTP + API key header"| YARP
-    YARP -->|"Unauthorized → 401"| AGENT
+    subgraph FOUNDRY["Azure AI Foundry"]
+        AGENT["🤖 Foundry Agent<br/>Calls MCP endpoint via proxy"]
+        TOOL["🔌 Foundry MCP Tool<br/>Custom Tool (Key-based)"]
+    end
+
+    subgraph AKS["☸️ AKS Cluster — Namespace: mcp-tools"]
+        YARP["🔀 YARP Proxy<br/>API key auth · Port 8080"]
+        MCP["🗄️ MongoDB MCP Server<br/>HTTP transport · Port 3000<br/>Internal ClusterIP only"]
+        SEEDER["🌱 Data Seeder<br/>Synthetic data writer"]
+    end
+
+    AGENT --> TOOL
+    TOOL -->|"MCP HTTP + API key header"| YARP
+    YARP -->|"Unauthorized → 401"| TOOL
     YARP -->|"Forwards authenticated requests"| MCP
     MCP -->|"MDB_MCP_CONNECTION_STRING"| COSMOS
     SEEDER -->|"Writes synthetic data"| COSMOS
-    KV -->|"Secrets injected at runtime"| YARP
-    KV -->|"Secrets injected at runtime"| MCP
-    YARP & MCP & SEEDER -->|"Deployed into"| AKS
+    KV -->|"Secrets injected at runtime"| YARP & MCP
 ```
 
 ### Core Components
