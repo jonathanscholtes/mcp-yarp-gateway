@@ -37,7 +37,7 @@ flowchart TD
 
     subgraph AKS["☸️ AKS Cluster"]
         YARP["🔀 YARP Proxy<br/>API key auth · Port 80"]
-        MCP["🗄️ MongoDB MCP Server<br/>HTTP transport · Port 3000<br/>Internal ClusterIP only"]
+        MCP["🗄️ MongoDB MCP Server<br/>StatefulSet · HTTP transport · Port 3000<br/>Headless Service (internal only)"]
         SEEDER["🌱 Data Seeder<br/>Synthetic data writer"]
     end
 
@@ -50,11 +50,52 @@ flowchart TD
     KV -->|"Secrets injected at runtime"| YARP & MCP
 ```
 
+### MCP Session Affinity
+
+When the MongoDB MCP Server is scaled to multiple replicas, MCP sessions must be pinned to the pod that created them — otherwise follow-up requests return `404`, `500`. YARP uses a custom `McpSessionId` affinity policy backed by a StatefulSet with per-pod DNS routing.
+
+```mermaid
+sequenceDiagram
+    participant Agent as AI Foundry Agent
+    participant LB as K8s LoadBalancer<br/>(ClientIP affinity)
+    participant YARP as YARP Proxy
+    participant Map as In-Memory Map<br/>(SessionId → Dest)
+    participant Pod0 as MCP Pod-0
+    participant Pod1 as MCP Pod-1
+    participant Pod2 as MCP Pod-2
+
+    Note over Agent,Pod2: 1️⃣ First request — no Mcp-Session-Id header
+    Agent->>LB: POST /mcp (no session ID)
+    LB->>YARP: Route to YARP replica (ClientIP sticky)
+    YARP->>Map: FindAffinitizedDestinations → AffinityKeyNotSet
+    YARP->>Pod1: Load balancer picks Pod-1
+    Pod1-->>YARP: 200 OK + Mcp-Session-Id: abc123
+    YARP->>Map: AffinitizeResponse: abc123 → d2
+    YARP-->>Agent: 200 OK + Mcp-Session-Id: abc123
+
+    Note over Agent,Pod2: 2️⃣ Subsequent request — session pinned to Pod-1
+    Agent->>LB: POST /mcp + Mcp-Session-Id: abc123
+    LB->>YARP: Same YARP replica (ClientIP sticky)
+    YARP->>Map: FindAffinitizedDestinations(abc123) → d2 ✅
+    YARP->>Pod1: Routed directly to Pod-1
+    Pod1-->>YARP: 200 OK
+    YARP-->>Agent: 200 OK
+```
+
+**Key design decisions:**
+
+| Concern | Solution |
+|---|---|
+| **Stable per-pod DNS** | StatefulSet + headless Service gives each pod a predictable address |
+| **Session → Pod mapping** | Custom `ISessionAffinityPolicy` with `ConcurrentDictionary` in YARP |
+| **Multi-YARP-replica support** | K8s Service `sessionAffinity: ClientIP` ensures same caller hits same YARP pod |
+| **Pod failure** | Mapping is removed; YARP redistributes and the MCP client re-initialises |
+
 ### Core Components
 
 | Component | Technology | Role |
 |---|---|---|
-| **YARP Proxy** | .NET 8, YARP | API key enforcement, HTTP request forwarding |
+| **YARP Proxy** | .NET 8, YARP | API key enforcement, HTTP request forwarding, MCP session affinity |
 | **MongoDB MCP Server** | Node.js, MCP SDK | MCP tool server over HTTP transport |
 | **Azure Cosmos DB for MongoDB** | Azure PaaS | DocumentDB backing store (DocumentDB API) |
 | **Data Seeder** | Python | Continuous synthetic data writer |
@@ -75,6 +116,7 @@ mcp-yarp-gateway/
 ├── apps/
 │   ├── yarp-proxy/                     # .NET 8 YARP reverse proxy
 │   │   ├── Program.cs                  # Entry point, middleware, proxy config
+│   │   ├── McpSessionAffinityPolicy.cs # Custom YARP session affinity (MCP session → pod pinning)
 │   │   ├── Proxy.csproj
 │   │   ├── appsettings.json            # Proxy routes, cluster destinations, auth config
 │   │   ├── appsettings.Development.json
@@ -184,7 +226,9 @@ az ad signed-in-user show --query id -o tsv
 | `Proxy:ApiKeyHeader` / `PROXY__APIKEYHEADER` | `api-key` | Header name checked for API key |
 | `Proxy:ApiKey` / `PROXY__APIKEY` | — | Expected API key value (from Key Vault) |
 | `Proxy:UpstreamTimeoutMinutes` / `PROXY__UPSTREAMTIMEOUTMINUTES` | `5` | Timeout for upstream MCP calls |
-| `ReverseProxy:Clusters:mcp-cluster:Destinations:d1:Address` | — | Internal URL of MongoDB MCP server |
+| `ReverseProxy:Clusters:mcp-cluster:Destinations:d1:Address` | — | Per-pod URL for MCP server pod 0 |
+| `ReverseProxy:Clusters:mcp-cluster:Destinations:d2:Address` | — | Per-pod URL for MCP server pod 1 |
+| `ReverseProxy:Clusters:mcp-cluster:Destinations:d3:Address` | — | Per-pod URL for MCP server pod 2 |
 
 ### MongoDB MCP Server Settings
 
