@@ -8,6 +8,7 @@ Minimal ASP.NET Core + YARP reverse proxy for MCP traffic with API-key authentic
 - Does not inspect request bodies.
 - Does not rewrite response bodies.
 - Uses a longer upstream timeout (default: 10 minutes) to avoid premature timeout failures.
+- Exposes Prometheus metrics at `/metrics` (HTTP request counts, durations, status codes).
 
 ## Configuration
 Set with `appsettings.json` and/or environment variables:
