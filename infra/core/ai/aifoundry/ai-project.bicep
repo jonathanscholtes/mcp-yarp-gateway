@@ -12,12 +12,12 @@ param aiProjectDescription string
 param accountName string
 
 
-resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
+resource account 'Microsoft.CognitiveServices/accounts@2025-09-01' existing = {
   name: accountName
 }
 
 
-resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
+resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-09-01' = {
   parent:account
   name: aiProjectName
   location: location
@@ -25,7 +25,8 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = 
     type: 'SystemAssigned'
   }
   properties: {
-
+    displayName: aiProjectFriendlyName
+    description: aiProjectDescription
   }
 }
 

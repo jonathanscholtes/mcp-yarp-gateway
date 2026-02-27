@@ -24,9 +24,13 @@ proxy:
   upstreamTimeoutMinutes: "10"
   # apiKey is pulled from Key Vault secret "proxy-api-key"
 
-# YARP upstream — in-cluster MongoDB MCP server
+# YARP upstream — one destination per StatefulSet pod for session affinity to work.
+# Each pod has a stable DNS name via the headless service.
+# When scaling, add/remove destinations here and redeploy the yarp-proxy chart.
 upstream:
-  address: "http://mongodb-mcp-server.tools.svc.cluster.local:3000/"
+  d1: "http://mongodb-mcp-server-0.mongodb-mcp-server.tools.svc.cluster.local:3000/"
+  d2: "http://mongodb-mcp-server-1.mongodb-mcp-server.tools.svc.cluster.local:3000/"
+  d3: "http://mongodb-mcp-server-2.mongodb-mcp-server.tools.svc.cluster.local:3000/"
 
 resources:
   requests:

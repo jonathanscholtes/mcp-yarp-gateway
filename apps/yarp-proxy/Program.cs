@@ -1,11 +1,14 @@
 using Prometheus;
 using System.Security.Cryptography;
 using System.Text;
+using Yarp.ReverseProxy.SessionAffinity;
 using Yarp.ReverseProxy.Transforms;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var proxySettings = builder.Configuration.GetSection("Proxy").Get<ProxySettings>() ?? new ProxySettings();
+
+builder.Services.AddSingleton<ISessionAffinityPolicy, McpSessionAffinityPolicy>();
 
 builder.Services
 	.AddReverseProxy()
@@ -39,7 +42,11 @@ var app = builder.Build();
 
 app.MapHealthChecks("/healthz");
 app.MapMetrics();
-app.UseHttpMetrics();
+app.UseWhen(
+	ctx => !ctx.Request.Path.StartsWithSegments("/healthz") &&
+	       !ctx.Request.Path.StartsWithSegments("/metrics"),
+	branch => branch.UseHttpMetrics()
+);
 
 app.MapGet("/", () => Results.Ok(new
 {

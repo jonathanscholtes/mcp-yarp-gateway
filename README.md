@@ -143,7 +143,8 @@ az account set --subscription "YOUR-SUBSCRIPTION-ID"
 .\deploy.ps1 `
     -Subscription "YOUR-SUBSCRIPTION-ID" `
     -Location "eastus2" `
-    -UserObjectId "YOUR-AAD-OBJECT-ID"
+    -UserObjectId "YOUR-AAD-OBJECT-ID" `
+    -AILocation 'westus3' [optional]
 ```
 
 Get your Object ID with:

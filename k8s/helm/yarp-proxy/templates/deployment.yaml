@@ -76,7 +76,11 @@ spec:
         - name: PROXY__UPSTREAMTIMEOUTMINUTES
           value: {{ .Values.proxy.upstreamTimeoutMinutes | quote }}
         - name: REVERSEPROXY__CLUSTERS__MCP-CLUSTER__DESTINATIONS__D1__ADDRESS
-          value: {{ .Values.upstream.address | quote }}
+          value: {{ .Values.upstream.d1 | quote }}
+        - name: REVERSEPROXY__CLUSTERS__MCP-CLUSTER__DESTINATIONS__D2__ADDRESS
+          value: {{ .Values.upstream.d2 | quote }}
+        - name: REVERSEPROXY__CLUSTERS__MCP-CLUSTER__DESTINATIONS__D3__ADDRESS
+          value: {{ .Values.upstream.d3 | quote }}
         readinessProbe:
           httpGet:
             path: /healthz
@@ -115,6 +119,10 @@ metadata:
   namespace: tools
 spec:
   type: {{ .Values.service.type }}
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
   selector:
     app: yarp-proxy
   ports:

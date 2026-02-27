@@ -36,7 +36,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' existing = {
   name: appInsightsName
 }
 
-resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
+resource account 'Microsoft.CognitiveServices/accounts@2025-09-01' = {
   name: accountName
   location: location
   sku: {
@@ -66,7 +66,7 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
 
 
 
-resource appInsightsConnection 'Microsoft.CognitiveServices/accounts/connections@2025-06-01' = {
+resource appInsightsConnection 'Microsoft.CognitiveServices/accounts/connections@2025-09-01' = {
   parent: account
   name: appInsightConnectionName
   properties: {
@@ -110,7 +110,7 @@ resource appInsightsConnection 'Microsoft.CognitiveServices/accounts/connections
 // }
 
 
-resource storageConnection 'Microsoft.CognitiveServices/accounts/connections@2025-06-01' = {
+resource storageConnection 'Microsoft.CognitiveServices/accounts/connections@2025-09-01' = {
   parent: account
   name: storageConnectionName
   properties: {

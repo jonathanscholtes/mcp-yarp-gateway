@@ -34,11 +34,12 @@ spec:
       key: connection-string
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mongodb-mcp-server
   namespace: tools
 spec:
+  serviceName: mongodb-mcp-server
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
@@ -141,14 +142,16 @@ spec:
           volumeAttributes:
             secretProviderClass: "mongodb-mcp-server-secrets"
 ---
-# Internal-only ClusterIP service — only reachable from YARP proxy within the cluster
+# Headless service — required by StatefulSet for stable per-pod DNS
+# Each pod gets a stable DNS name: <pod>.<service>.<namespace>.svc.cluster.local
+# e.g. mongodb-mcp-server-0.mongodb-mcp-server.tools.svc.cluster.local
 apiVersion: v1
 kind: Service
 metadata:
   name: mongodb-mcp-server
   namespace: tools
 spec:
-  type: ClusterIP
+  clusterIP: None
   selector:
     app: mongodb-mcp-server
   ports:

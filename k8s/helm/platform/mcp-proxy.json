@@ -226,7 +226,7 @@
       "id": 8,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
       "targets": [{
-        "expr": "kube_deployment_status_replicas_ready{namespace=\"tools\", deployment=\"mongodb-mcp-server\"}",
+        "expr": "kube_statefulset_status_replicas_ready{namespace=\"tools\", statefulset=\"mongodb-mcp-server\"}",
         "legendFormat": "ready",
         "refId": "A"
       }],
@@ -323,7 +323,7 @@
           "refId": "A"
         },
         {
-          "expr": "process_working_set_bytes{app=\"mongodb-mcp-server\"}",
+          "expr": "process_resident_memory_bytes{app=\"mongodb-mcp-server\"}",
           "legendFormat": "MCP: {{pod}}",
           "refId": "B"
         }
@@ -335,67 +335,6 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
-      "id": 102,
-      "title": "MongoDB MCP Server",
-      "type": "row"
-    },
-
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
-      "id": 13,
-      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        {
-          "expr": "mongodb_ss_connections{app=\"mongodb-mcp-server\", conn_type=\"current\"}",
-          "legendFormat": "Current",
-          "refId": "A"
-        },
-        {
-          "expr": "mongodb_ss_connections{app=\"mongodb-mcp-server\", conn_type=\"available\"}",
-          "legendFormat": "Available",
-          "refId": "B"
-        },
-        {
-          "expr": "mongodb_connections{app=\"mongodb-mcp-server\", state=\"current\"}",
-          "legendFormat": "Current (legacy)",
-          "refId": "C"
-        }
-      ],
-      "title": "MongoDB Connections",
-      "type": "timeseries"
-    },
-
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": { "unit": "ops", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
-      "id": 14,
-      "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        {
-          "expr": "rate(mongodb_ss_opcounters{app=\"mongodb-mcp-server\"}[2m])",
-          "legendFormat": "{{legacy_op_type}}",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(mongodb_op_counters_total{app=\"mongodb-mcp-server\"}[2m])",
-          "legendFormat": "{{type}} (legacy)",
-          "refId": "B"
-        }
-      ],
-      "title": "MongoDB Ops/s by Type",
-      "type": "timeseries"
-    },
-
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
       "id": 103,
       "title": "Proxy Auth Troubleshooting",
       "type": "row"
@@ -408,10 +347,13 @@
         "overrides": [
           { "matcher": { "id": "byName", "options": "Authorized (2xx)" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
           { "matcher": { "id": "byName", "options": "Unauthorized (401)" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Not Found (404)" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
+          { "matcher": { "id": "byName", "options": "Not Found (404)" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "MCP App Error (500)" }, "properties": [{ "id": "color", "value": { "fixedColor": "dark-red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Upstream Unreachable (502)" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Upstream Timeout (504)" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] }
         ]
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 36 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 27 },
       "id": 15,
       "options": { "legend": { "calcs": ["mean", "max", "sum"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi" } },
       "targets": [
@@ -431,9 +373,19 @@
           "refId": "C"
         },
         {
-          "expr": "sum(rate(http_requests_received_total{app=\"yarp-proxy\", code=~\"5..\"}[2m])) or vector(0)",
-          "legendFormat": "Server Error (5xx)",
+          "expr": "sum(rate(http_requests_received_total{app=\"yarp-proxy\", code=\"500\"}[2m])) or vector(0)",
+          "legendFormat": "MCP App Error (500)",
           "refId": "D"
+        },
+        {
+          "expr": "sum(rate(http_requests_received_total{app=\"yarp-proxy\", code=\"502\"}[2m])) or vector(0)",
+          "legendFormat": "Upstream Unreachable (502)",
+          "refId": "E"
+        },
+        {
+          "expr": "sum(rate(http_requests_received_total{app=\"yarp-proxy\", code=\"504\"}[2m])) or vector(0)",
+          "legendFormat": "Upstream Timeout (504)",
+          "refId": "F"
         }
       ],
       "title": "Auth & Routing Breakdown — Authorized vs Rejected vs Upstream Errors",

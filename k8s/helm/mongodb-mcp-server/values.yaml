@@ -3,7 +3,7 @@ image:
   tag: latest
   pullPolicy: Always
 
-replicas: 1
+replicas: 3
 
 # HTTP transport settings
 http:
