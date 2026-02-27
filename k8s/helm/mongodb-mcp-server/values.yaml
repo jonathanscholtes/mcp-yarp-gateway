@@ -1,0 +1,33 @@
+image:
+  repository: mongodb/mongodb-mcp-server
+  tag: latest
+  pullPolicy: Always
+
+replicas: 1
+
+# HTTP transport settings
+http:
+  host: "0.0.0.0"
+  port: 3000
+
+# Server behaviour
+readOnly: true          # Recommended default - set to false to allow writes
+telemetry: "disabled"   # Disable telemetry inside AKS
+loggers: "stderr"       # Log to stderr for container log capture
+
+# Optional: disable tool categories not needed
+# disabledTools: "atlas"
+
+# Azure Key Vault / Workload Identity
+managedIdentityClientId: ""   # --set managedIdentityClientId=<client-id>
+keyVault:
+  name: ""                    # --set keyVault.name=<keyvault-name>
+  tenantId: ""                # --set keyVault.tenantId=<tenant-id>
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"

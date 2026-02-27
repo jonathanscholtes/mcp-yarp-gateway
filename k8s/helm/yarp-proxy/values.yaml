@@ -1,0 +1,36 @@
+registry: myacr.azurecr.io
+image: yarp-proxy
+tag: 0.1.0
+replicas: 2
+
+# Container port (must match ASPNETCORE_URLS in Dockerfile)
+containerPort: 8080
+
+# Service
+service:
+  type: LoadBalancer
+  port: 80
+
+# Azure Workload Identity / Key Vault
+managedIdentityClientId: ""   # --set managedIdentityClientId=<client-id>
+keyVault:
+  name: ""                    # --set keyVault.name=<keyvault-name>
+  tenantId: ""                # --set keyVault.tenantId=<tenant-id>
+
+# Proxy settings — mirror of appsettings.json Proxy section
+proxy:
+  apiKeyHeader: "X-API-Key"
+  upstreamTimeoutMinutes: "10"
+  # apiKey is pulled from Key Vault secret "proxy-api-key"
+
+# YARP upstream — in-cluster MongoDB MCP server
+upstream:
+  address: "http://mongodb-mcp-server.tools.svc.cluster.local:3000/"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"

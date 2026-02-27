@@ -1,0 +1,5 @@
+apiVersion: v2
+name: mcp-tools
+description: Bootstrap chart — creates the tools namespace and shared RBAC for YARP proxy + MongoDB MCP
+version: 0.1.0
+appVersion: "0.1.0"

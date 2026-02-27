@@ -1,0 +1,5 @@
+apiVersion: v2
+name: mongodb-mcp-server
+description: Helm chart for the MongoDB MCP Server (HTTP transport, internal only)
+version: 0.1.0
+appVersion: "latest"

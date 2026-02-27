@@ -1,0 +1,9 @@
+# Namespace bootstrap for the tools namespace.
+# Creates the namespace; each workload chart is responsible for its own resources.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tools
+  labels:
+    azure.workload.identity/use: "true"

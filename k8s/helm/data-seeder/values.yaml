@@ -1,0 +1,24 @@
+# Container registry
+registry: myacr.azurecr.io
+
+image: data-seeder
+tag: 0.1.0
+replicas: 1
+
+# Generator behaviour
+mode: "continuous"            # "once" or "continuous"
+batchSize: "20"
+intervalSeconds: "30"
+
+# Target collections
+mongodb:
+  database: "contracts_db"
+  contractsCollection: "contracts"
+  riskMemosCollection: "risk_memos"
+  marketCollection: "market_data"
+
+# Azure Workload Identity / Key Vault
+managedIdentityClientId: ""  # Set via --set managedIdentityClientId=<client-id>
+keyVault:
+  name: ""                    # Set via --set keyVault.name=<keyvault-name>
+  tenantId: ""                # Set via --set keyVault.tenantId=<tenant-id>

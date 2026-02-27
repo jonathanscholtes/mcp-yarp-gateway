@@ -1,0 +1,5 @@
+apiVersion: v2
+name: yarp-proxy
+description: YARP reverse proxy for MCP traffic with API-key authentication
+version: 0.1.0
+appVersion: "0.1.0"

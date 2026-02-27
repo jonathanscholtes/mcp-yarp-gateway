@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "lrtArv6l044=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\Proxy\\Proxy.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\joscholt\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
+    "C:\\Users\\joscholt\\.nuget\\packages\\yarp.reverseproxy\\2.3.0\\yarp.reverseproxy.2.3.0.nupkg.sha512"
+  ],
+  "logs": []
+}

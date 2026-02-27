@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: data-seeder-sa
+  namespace: tools
+  annotations:
+    azure.workload.identity/client-id: {{ .Values.managedIdentityClientId | quote }}
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: data-seeder-secrets
+  namespace: tools
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "false"
+    clientID: {{ .Values.managedIdentityClientId | quote }}
+    keyvaultName: {{ .Values.keyVault.name | quote }}
+    cloudName: ""
+    objects: |
+      array:
+        - |
+          objectName: mongodb-connection-string
+          objectType: secret
+          objectVersion: ""
+    tenantId: {{ .Values.keyVault.tenantId | quote }}
+  secretObjects:
+  - secretName: mongodb-secrets
+    type: Opaque
+    data:
+    - objectName: mongodb-connection-string
+      key: connection-string
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-seeder
+  namespace: tools
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: data-seeder
+  template:
+    metadata:
+      labels:
+        app: data-seeder
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: data-seeder-sa
+      containers:
+      - name: data-seeder
+        image: {{ .Values.registry }}/{{ .Values.image }}:{{ .Values.tag }}
+        env:
+        - name: MONGODB_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secrets
+              key: connection-string
+        - name: MONGODB_DATABASE
+          value: {{ .Values.mongodb.database | quote }}
+        - name: MONGODB_CONTRACTS_COLLECTION
+          value: {{ .Values.mongodb.contractsCollection | quote }}
+        - name: MONGODB_RISK_MEMOS_COLLECTION
+          value: {{ .Values.mongodb.riskMemosCollection | quote }}
+        - name: MONGODB_MARKET_COLLECTION
+          value: {{ .Values.mongodb.marketCollection | quote }}
+        - name: GENERATOR_MODE
+          value: {{ .Values.mode | quote }}
+        - name: GENERATOR_BATCH_SIZE
+          value: {{ .Values.batchSize | quote }}
+        - name: GENERATOR_INTERVAL_SECONDS
+          value: {{ .Values.intervalSeconds | quote }}
+        volumeMounts:
+        - name: secrets-store
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "data-seeder-secrets"

@@ -1,0 +1,5 @@
+# No configurable values  this chart is a pure namespace/RBAC bootstrap.
+# All workloads are deployed via their own standalone charts:
+#   k8s/helm/yarp-proxy
+#   k8s/helm/mongodb-mcp-server
+#   k8s/helm/data-seeder
