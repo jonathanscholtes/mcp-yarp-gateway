@@ -310,6 +310,15 @@ data:
             regex: ([^:]+)(?::\d+)?;(\d+)
             replacement: $1:$2
             target_label: __address__
+          # Carry Kubernetes pod labels (app, etc.) onto every scraped metric
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
       
 
 ---
@@ -403,10 +412,8 @@ metadata:
   name: grafana-dashboards
   namespace: platform
 data:
-  risk-operations.json: |
-{{ .Files.Get "risk-operations.json" | indent 4 }}
-  risk-operations-enhanced.json: |
-{{ .Files.Get "risk-operations-enhanced.json" | indent 4 }}
+  mcp-proxy.json: |
+{{ .Files.Get "mcp-proxy.json" | indent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
