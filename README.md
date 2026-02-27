@@ -64,6 +64,9 @@ flowchart TD
 
 ## 📁 Project Structure
 
+<details>
+<summary>Expand to view repository layout</summary>
+
 ```
 mcp-yarp-gateway/
 ├── deploy.ps1                          # Full end-to-end deployment orchestrator
@@ -85,21 +88,18 @@ mcp-yarp-gateway/
 │   ├── main.bicep                      # Subscription-scoped main template
 │   └── core/
 │       ├── ai/                         # Azure AI Foundry (account, project, models)
-│       ├── app/                        # App Service (optional)
 │       ├── data/
-│       │   ├── cosmosdb/               # Cosmos DB (NoSQL)
-│       │   ├── mongodb/                # Cosmos DB for MongoDB
-│       │   └── storage/                # Azure Storage accounts
+│       │   └── mongodb/                # Cosmos DB for MongoDB
 │       ├── monitor/                    # Log Analytics, App Insights
 │       ├── platform/                   # AKS, Container Registry
 │       └── security/                   # Key Vault, Managed Identity, RBAC
 │
 ├── k8s/helm/
-│   ├── mcp-tools/                      # Namespace bootstrap (creates mcp-tools namespace)
+│   ├── mcp-tools/                      # Namespace bootstrap (creates tools namespace)
 │   ├── yarp-proxy/                     # YARP proxy Helm chart (port 80)
 │   ├── mongodb-mcp-server/             # MongoDB MCP server chart (internal, port 3000)
 │   ├── data-seeder/                    # Synthetic data seeder chart
-│   └── platform/                       # Shared platform resources
+│   └── platform/                       # Shared platform resources (Prometheus, Grafana)
 │
 └── scripts/
     ├── Deploy-Infrastructure.ps1       # Phase 1: Bicep infra deployment
@@ -109,6 +109,8 @@ mcp-yarp-gateway/
     └── common/
         └── DeploymentFunctions.psm1    # Shared PowerShell utilities
 ```
+
+</details>
 
 ---
 
@@ -171,11 +173,14 @@ az ad signed-in-user show --query id -o tsv
 
 ## 🔧 Configuration
 
+<details>
+<summary>Expand to view environment variable reference</summary>
+
 ### YARP Proxy Settings
 
 | Variable | Default | Description |
 |---|---|---|
-| `Proxy:ApiKeyHeader` / `PROXY__APIKEYHEADER` | `x-api-key` | Header name checked for API key |
+| `Proxy:ApiKeyHeader` / `PROXY__APIKEYHEADER` | `api-key` | Header name checked for API key |
 | `Proxy:ApiKey` / `PROXY__APIKEY` | — | Expected API key value (from Key Vault) |
 | `Proxy:UpstreamTimeoutMinutes` / `PROXY__UPSTREAMTIMEOUTMINUTES` | `5` | Timeout for upstream MCP calls |
 | `ReverseProxy:Clusters:mcp-cluster:Destinations:d1:Address` | — | Internal URL of MongoDB MCP server |
@@ -203,6 +208,8 @@ az ad signed-in-user show --query id -o tsv
 
 Authentication to AKS, Cosmos DB, and Key Vault uses **Managed Identity** — no connection strings or secrets committed in the repo.
 
+</details>
+
 ---
 
 ## 🔐 Security Model
@@ -226,13 +233,31 @@ Authentication to AKS, Cosmos DB, and Key Vault uses **Managed Identity** — no
 
 ---
 
+## 🔌 Post-Deployment: Add Foundry MCP Connection
+
+After deployment completes, register the YARP proxy as a custom MCP tool in your Foundry project so agents can reach it. The YARP proxy external IP and API key are printed in the deployment summary at the end of `deploy.ps1`.
+
+1. Open your Foundry project in [ai.azure.com](https://ai.azure.com/).
+2. Go to **Build → Tools** (or open **Agent Builder**).
+3. Select **Add tool → Custom → Model Context Protocol**.
+4. Enter the following details:
+
+| Field | Value |
+|---|---|
+| Name | `yarp-proxy-mcp` |
+| Remote MCP Server endpoint | `http://<YARP_PROXY_IP>/mcp` |
+| Authentication | Key-based |
+| Credential | `"api-key": "<proxy-api-key>"` |
+
+5. Select **Connect**.
+
+> For full details on connecting custom MCP tools see [Connect using a custom MCP tool](https://learn.microsoft.com/en-us/azure/ai-foundry/mcp/build-your-own-mcp-server?view=foundry#connect-using-a-custom-mcp-tool).
+
+---
+
 ## ♻️ Clean Up
 
-Delete all resources by removing the resource group:
-
-```powershell
-az group delete --name "rg-mcp-yarp-eastus2" --yes --no-wait
-```
+After completing testing or when no longer needed, ensure you delete any unused Azure resources or remove the entire Resource Group to avoid additional charges.
 
 ---
 

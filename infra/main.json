@@ -1138,28 +1138,6 @@
             {
               "type": "Microsoft.KeyVault/vaults/secrets",
               "apiVersion": "2022-07-01",
-              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'rabbitmq-username')]",
-              "properties": {
-                "value": "riskuser"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.KeyVault/vaults/secrets",
-              "apiVersion": "2022-07-01",
-              "name": "[format('{0}/{1}', parameters('keyVaultName'), 'rabbitmq-password')]",
-              "properties": {
-                "value": "[uniqueString(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), 'rabbitmq')]"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.KeyVault/vaults/secrets",
-              "apiVersion": "2022-07-01",
               "name": "[format('{0}/{1}', parameters('keyVaultName'), 'mongodb-username')]",
               "properties": {
                 "value": "[parameters('mongoDbUsername')]"
