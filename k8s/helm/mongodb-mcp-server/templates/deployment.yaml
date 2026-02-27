@@ -93,15 +93,13 @@ spec:
         - name: MDB_MCP_LOGGERS
           value: {{ .Values.loggers | quote }}
         readinessProbe:
-          httpGet:
-            path: /
+          tcpSocket:
             port: http-mcp
           initialDelaySeconds: 10
           periodSeconds: 15
           failureThreshold: 3
         livenessProbe:
-          httpGet:
-            path: /
+          tcpSocket:
             port: http-mcp
           initialDelaySeconds: 20
           periodSeconds: 30

@@ -18,8 +18,8 @@ Write-Host "Container Registry : $ContainerRegistryName" -ForegroundColor White
 Write-Host "Resource Group     : $ResourceGroupName" -ForegroundColor White
 
 $imageConfigs = @{
-    "yarp-proxy"  = @{ path = "."; dockerfile = ".\apps\yarp-proxy\Dockerfile" }
-    "data-seeder" = @{ path = "."; dockerfile = ".\apps\data-seeder\Dockerfile" }
+    "yarp-proxy"  = @{ path = ".\apps\yarp-proxy";  dockerfile = ".\apps\yarp-proxy\Dockerfile" }
+    "data-seeder" = @{ path = ".\apps\data-seeder"; dockerfile = ".\apps\data-seeder\Dockerfile" }
 }
 
 foreach ($imageName in $Images) {

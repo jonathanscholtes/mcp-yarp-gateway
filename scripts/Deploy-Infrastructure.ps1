@@ -86,6 +86,21 @@ if (-not $outputs) {
 }
 
 Write-Host "`n[OK] Infrastructure deployed successfully" -ForegroundColor Green
+
+# Generate and store proxy API key in Key Vault
+$keyVaultName = $outputs.keyVaultName.value
+$proxyApiKey = New-SecurePassword -Length 32
+Write-Host "`nStoring proxy-api-key in Key Vault: $keyVaultName" -ForegroundColor Yellow
+az keyvault secret set `
+    --vault-name $keyVaultName `
+    --name "proxy-api-key" `
+    --value $proxyApiKey `
+    --output none
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to store proxy-api-key in Key Vault '$keyVaultName'"
+}
+Write-Host "[OK] proxy-api-key stored in Key Vault" -ForegroundColor Green
+
 Write-Host "`nDeployment Outputs:" -ForegroundColor Cyan
 Write-Host "  Resource Group: $($outputs.resourceGroupName.value)" -ForegroundColor White
 Write-Host "  AKS Cluster: $($outputs.aksName.value)" -ForegroundColor White
