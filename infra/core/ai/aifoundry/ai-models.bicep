@@ -1,5 +1,5 @@
 
-@description('Name of the Azure AI Foundry  instance')
+@description('Name of the Microsoft Foundry  instance')
 param accountName string
 
 

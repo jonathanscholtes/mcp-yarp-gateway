@@ -312,7 +312,7 @@ def main():
         description="Deploy MongoDB analysis agents for the MCP YARP proxy project"
     )
     parser.add_argument("--project-endpoint", required=True,
-        help="Azure AI Foundry project endpoint URL")
+        help="Microsoft Foundry project endpoint URL")
     parser.add_argument("--model-deployment", required=True,
         help="Model deployment name (e.g. gpt-4o)")
     parser.add_argument("--mcp-proxy-url",

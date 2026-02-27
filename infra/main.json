@@ -2287,7 +2287,7 @@
                             "accountName": {
                               "type": "string",
                               "metadata": {
-                                "description": "Name of the Azure AI Foundry  instance"
+                                "description": "Name of the Microsoft Foundry  instance"
                               }
                             }
                           },

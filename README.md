@@ -2,9 +2,9 @@
 
 **A Secure Reverse Proxy for Model Context Protocol Traffic on Azure Kubernetes Service**
 
-MCP YARP Gateway provides a production-oriented MCP access path on AKS where Azure AI Foundry agents communicate through a hardened YARP proxy layer to backend MCP tool servers — enforcing API key authentication and preserving HTTP streaming behavior.
+MCP YARP Gateway provides a production-oriented MCP access path on AKS where Microsoft Foundry agents communicate through a hardened YARP proxy layer to backend MCP tool servers — enforcing API key authentication and preserving HTTP streaming behavior.
 
-> **Flow:** Azure AI Foundry Agent → YARP Proxy (API key auth) → MongoDB MCP Server (HTTP transport) → Azure Cosmos DB for MongoDB (DocumentDB)
+> **Flow:** Microsoft Foundry Agent → YARP Proxy (API key auth) → MongoDB MCP Server (HTTP transport) → Azure Cosmos DB for MongoDB (DocumentDB)
 
 ---
 
@@ -16,7 +16,7 @@ This project secures and standardizes MCP HTTP traffic on AKS using a YARP rever
 - YARP reverse proxy enforcing API key authentication for all MCP traffic
 - MongoDB MCP Server running in AKS with HTTP transport (internal ClusterIP only)
 - Azure Cosmos DB for MongoDB (DocumentDB) as the backing data store
-- Azure AI Foundry Agent integration via proxied MCP endpoint
+- Microsoft Foundry Agent integration via proxied MCP endpoint
 - Synthetic data seeder for populating DocumentDB with test data
 - Kubernetes-native deployment via Helm charts
 - Azure-native infrastructure provisioned with Bicep
@@ -56,27 +56,25 @@ When the MongoDB MCP Server is scaled to multiple replicas, MCP sessions must be
 
 ```mermaid
 sequenceDiagram
-    participant Agent as AI Foundry Agent
-    participant LB as K8s LoadBalancer<br/>(ClientIP affinity)
-    participant YARP as YARP Proxy
-    participant Map as In-Memory Map<br/>(SessionId → Dest)
+    participant Agent as Microsoft Foundry Agent
+    participant LB as K8s LoadBalancer
+    participant YARP as YARP Proxy (any replica)
     participant Pod0 as MCP Pod-0
     participant Pod1 as MCP Pod-1
     participant Pod2 as MCP Pod-2
 
     Note over Agent,Pod2: 1️⃣ First request — no Mcp-Session-Id header
     Agent->>LB: POST /mcp (no session ID)
-    LB->>YARP: Route to YARP replica (ClientIP sticky)
-    YARP->>Map: FindAffinitizedDestinations → AffinityKeyNotSet
-    YARP->>Pod1: Load balancer picks Pod-1
+    LB->>YARP: Route to any YARP replica
+    YARP->>Pod1: LB picks Pod-1 (dest D2)
     Pod1-->>YARP: 200 OK + Mcp-Session-Id: abc123
-    YARP->>Map: AffinitizeResponse: abc123 → d2
-    YARP-->>Agent: 200 OK + Mcp-Session-Id: abc123
+    Note over YARP: AffinitizeResponse encodes:<br/>D2.abc123
+    YARP-->>Agent: 200 OK + Mcp-Session-Id: D2.abc123
 
-    Note over Agent,Pod2: 2️⃣ Subsequent request — session pinned to Pod-1
-    Agent->>LB: POST /mcp + Mcp-Session-Id: abc123
-    LB->>YARP: Same YARP replica (ClientIP sticky)
-    YARP->>Map: FindAffinitizedDestinations(abc123) → d2 ✅
+    Note over Agent,Pod2: 2️⃣ Subsequent request — any YARP replica can route
+    Agent->>LB: POST /mcp + Mcp-Session-Id: D2.abc123
+    LB->>YARP: Route to any YARP replica
+    Note over YARP: Parse prefix D2 → route to dest D2<br/>Restore header to abc123
     YARP->>Pod1: Routed directly to Pod-1
     Pod1-->>YARP: 200 OK
     YARP-->>Agent: 200 OK
@@ -87,9 +85,9 @@ sequenceDiagram
 | Concern | Solution |
 |---|---|
 | **Stable per-pod DNS** | StatefulSet + headless Service gives each pod a predictable address |
-| **Session → Pod mapping** | Custom `ISessionAffinityPolicy` with `ConcurrentDictionary` in YARP |
-| **Multi-YARP-replica support** | K8s Service `sessionAffinity: ClientIP` ensures same caller hits same YARP pod |
-| **Pod failure** | Mapping is removed; YARP redistributes and the MCP client re-initialises |
+| **Session → Pod mapping** | Stateless: destination ID encoded into `Mcp-Session-Id` header (`D2.abc123`) |
+| **Multi-YARP-replica support** | Fully stateless — any YARP replica can parse the header and route correctly |
+| **Pod failure** | Destination not found in cluster → YARP redistributes; MCP client re-initialises |
 
 ### Core Components
 
@@ -99,7 +97,7 @@ sequenceDiagram
 | **MongoDB MCP Server** | Node.js, MCP SDK | MCP tool server over HTTP transport |
 | **Azure Cosmos DB for MongoDB** | Azure PaaS | DocumentDB backing store (DocumentDB API) |
 | **Data Seeder** | Python | Continuous synthetic data writer |
-| **Azure AI Foundry Agent** | Azure AI Foundry | AI agent consuming MCP tools via proxy |
+| **Microsoft Foundry Agent** | Microsoft Foundry | AI agent consuming MCP tools via proxy |
 
 ---
 
@@ -129,7 +127,7 @@ mcp-yarp-gateway/
 ├── infra/                              # Infrastructure as Code (Bicep)
 │   ├── main.bicep                      # Subscription-scoped main template
 │   └── core/
-│       ├── ai/                         # Azure AI Foundry (account, project, models)
+│       ├── ai/                         # Microsoft Foundry (account, project, models)
 │       ├── data/
 │       │   └── mongodb/                # Cosmos DB for MongoDB
 │       ├── monitor/                    # Log Analytics, App Insights
@@ -147,7 +145,7 @@ mcp-yarp-gateway/
     ├── Deploy-Infrastructure.ps1       # Phase 1: Bicep infra deployment
     ├── Deploy-Containers.ps1           # Phase 2: ACR image build & push
     ├── Deploy-Kubernetes.ps1           # Phase 3: Helm chart deployments
-    ├── Deploy-FoundryAgents.ps1        # Phase 4: Azure AI Foundry agent setup
+    ├── Deploy-FoundryAgents.ps1        # Phase 4: Microsoft Foundry agent setup
     └── common/
         └── DeploymentFunctions.psm1    # Shared PowerShell utilities
 ```
@@ -165,7 +163,7 @@ mcp-yarp-gateway/
 | Azure CLI | Latest | `az login` authenticated |
 | PowerShell | 7+ | Required for deployment scripts |
 | Helm | 3+ | Required for Kubernetes deployments |
-| Azure subscription | — | Sufficient quota for AKS, Cosmos DB, AI Foundry, ACR |
+| Azure subscription | — | Sufficient quota for AKS, Cosmos DB, Microsoft Foundry, ACR |
 
 > No Docker required locally — container images are built in Azure Container Registry via `az acr build`.
 
@@ -201,7 +199,7 @@ az ad signed-in-user show --query id -o tsv
 | 1 — Infrastructure | `Deploy-Infrastructure.ps1` | Creates all Azure resources via Bicep |
 | 2 — Container Images | `Deploy-Containers.ps1` | Builds & pushes proxy and seeder images to ACR |
 | 3 — Kubernetes | `Deploy-Kubernetes.ps1` | Deploys Helm charts to AKS |
-| 4 — Foundry Agents | `Deploy-FoundryAgents.ps1` | Configures Azure AI Foundry agents |
+| 4 — Foundry Agents | `Deploy-FoundryAgents.ps1` | Configures Microsoft Foundry agents |
 
 **Resources created (~15–20 min):**
 
@@ -209,7 +207,7 @@ az ad signed-in-user show --query id -o tsv
 - Azure Container Registry (proxy + seeder images)
 - Azure Cosmos DB for MongoDB (DocumentDB backing store)
 - Azure Key Vault + Managed Identity (secretless auth throughout)
-- Azure AI Foundry (account, project, model deployment)
+- Microsoft Foundry (account, project, model deployment)
 - Log Analytics Workspace + Application Insights
 
 ---
@@ -246,7 +244,7 @@ az ad signed-in-user show --query id -o tsv
 
 | Variable | Description |
 |---|---|
-| `PROJECT_ENDPOINT` | Azure AI Foundry project endpoint URL |
+| `PROJECT_ENDPOINT` | Microsoft Foundry project endpoint URL |
 | `MODEL_DEPLOYMENT_NAME` | Model deployment name |
 | `MCP_SERVER_LABEL` | Label for MCP server registration |
 | `MCP_SERVER_URL` | Set to YARP proxy endpoint (not MongoDB MCP directly) |

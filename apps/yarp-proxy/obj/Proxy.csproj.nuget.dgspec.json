@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\Proxy\\Proxy.csproj": {}
+    "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\apps\\yarp-proxy\\Proxy.csproj": {}
   },
   "projects": {
-    "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\Proxy\\Proxy.csproj": {
+    "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\apps\\yarp-proxy\\Proxy.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\Proxy\\Proxy.csproj",
+        "projectUniqueName": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\apps\\yarp-proxy\\Proxy.csproj",
         "projectName": "Proxy",
-        "projectPath": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\Proxy\\Proxy.csproj",
+        "projectPath": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\apps\\yarp-proxy\\Proxy.csproj",
         "packagesPath": "C:\\Users\\joscholt\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\Proxy\\obj\\",
+        "outputPath": "C:\\Users\\joscholt\\OneDrive - Microsoft\\Documents\\GitHub\\MCP_YARP_Proxy\\apps\\yarp-proxy\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\joscholt\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -46,6 +46,10 @@
             "Yarp.ReverseProxy": {
               "target": "Package",
               "version": "[2.3.0, )"
+            },
+            "prometheus-net.AspNetCore": {
+              "target": "Package",
+              "version": "[8.2.1, )"
             }
           },
           "imports": [

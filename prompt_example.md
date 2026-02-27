@@ -1,7 +1,7 @@
 # Example Prompts — MongoDB Analysis Agents
 
-Three agents are deployed to Azure AI Foundry, each connected to the MongoDB MCP server
-via the YARP reverse proxy. Use these prompts in the AI Foundry playground, a notebook,
+Three agents are deployed to Microsoft Foundry, each connected to the MongoDB MCP server
+via the YARP reverse proxy. Use these prompts in the Foundry playground, a notebook,
 or any client that invokes agents by name.
 
 ---

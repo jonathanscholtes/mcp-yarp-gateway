@@ -44,7 +44,7 @@ Write-Host "  API Key           : $(if ($McpApiKey) { '***set***' } else { 'NOT 
 # which is required for Agent Service to inject the correct auth header into MCP requests.
 #
 # Manual steps (one-time, per project):
-#   1. Open Azure AI Foundry portal → your project → Management → Connected resources
+#   1. Open Microsoft Foundry portal → your project → Management → Connected resources
 #   2. Click "+ New connection" → choose "Custom keys" (or "Remote MCP Server" if available)
 #   3. Set:
 #        Name            : yarp-proxy-mcp
@@ -79,7 +79,7 @@ if ($podStatus -eq "Running") {
 }
 
 # Deploy agents
-Write-Host "`nDeploying agents to Azure AI Foundry..." -ForegroundColor Yellow
+Write-Host "`nDeploying agents to Microsoft Foundry..." -ForegroundColor Yellow
 
 $pythonArgs = @(
     "scripts/deploy_foundry_agents.py",
