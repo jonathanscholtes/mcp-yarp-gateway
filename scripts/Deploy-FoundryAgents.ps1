@@ -39,70 +39,41 @@ Write-Host "  Model Deployment  : $ModelDeployment" -ForegroundColor White
 Write-Host "  MCP Proxy URL     : $McpProxyUrl" -ForegroundColor White
 Write-Host "  API Key           : $(if ($McpApiKey) { '***set***' } else { 'NOT SET' })" -ForegroundColor White
 
-# ── Create Foundry account connection (ARM control plane) ─────────────────
+# ── Create Foundry MCP tool connection via Bicep ─────────────────────────
 # MCPTool requires project_connection_id; the sensitive api-key header
 # cannot be passed via the headers parameter.  The connection is created at
-# the CognitiveServices account level via the ARM API.
+# the CognitiveServices account level using the mcp-connection.bicep template.
 #
 $connectionName = "yarp-proxy-mcp"
 
-# Derive the account name from the project endpoint host
+# Derive account name and resource group from the project endpoint
 $accountName = ([System.Uri]$AiProjectEndpoint).Host.Split('.')[0]
 
-# Look up the ARM resource ID for the CognitiveServices account
 Write-Host "`nLooking up Foundry account '$accountName'..." -ForegroundColor Yellow
 $account = az cognitiveservices account list --query "[?name=='$accountName'] | [0]" -o json 2>$null | ConvertFrom-Json
 if (-not $account) {
     throw "Could not find CognitiveServices account '$accountName'. Ensure you are logged into the correct subscription."
 }
-$accountResourceId = $account.id
-Write-Host "  Account: $accountResourceId" -ForegroundColor Green
 
-# Check whether the connection already exists
-$connResourceId = "$accountResourceId/connections/$connectionName"
-$connExists = $false
-try {
-    az rest --method GET --uri "https://management.azure.com${connResourceId}?api-version=2025-04-01-preview" --output none 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $connExists = $true
-        Write-Host "  [OK] Connection '$connectionName' already exists" -ForegroundColor Green
-    }
-} catch { }
+# Extract resource group from the account resource ID
+$rgName = if ($ResourceGroupName) { $ResourceGroupName } else { ($account.id -split '/')[4] }
+Write-Host "  Account: $($account.id)" -ForegroundColor Green
+Write-Host "  Resource Group: $rgName" -ForegroundColor Green
 
-if (-not $connExists) {
-    Write-Host "  Creating connection '$connectionName'..." -ForegroundColor Yellow
-    $body = @{
-        properties = @{
-            category      = "RemoteTool"
-            target        = $McpProxyUrl
-            authType      = "CustomKeys"
-            isSharedToAll = $true
-            credentials   = @{
-                type = "CustomKeys"
-                keys = @{
-                    "api-key" = $McpApiKey
-                }
-            }
-            metadata      = @{
-                type = "custom_MCP"
-            }
-        }
-    }
-    $bodyFile = [System.IO.Path]::GetTempFileName()
-    $body | ConvertTo-Json -Depth 4 | Set-Content -Path $bodyFile -Encoding UTF8
+# Deploy the MCP connection via Bicep (idempotent)
+Write-Host "  Deploying MCP connection '$connectionName'..." -ForegroundColor Yellow
+$bicepFile = "$PSScriptRoot\..\infra\core\ai\aifoundry\mcp-connection.bicep"
 
-    az rest --method PUT `
-        --uri "https://management.azure.com${connResourceId}?api-version=2025-04-01-preview" `
-        --headers "Content-Type=application/json" `
-        --body "@$bodyFile" --output none
+az deployment group create `
+    --resource-group $rgName `
+    --template-file $bicepFile `
+    --parameters accountName=$accountName connectionName=$connectionName mcpProxyUrl=$McpProxyUrl mcpApiKey=$McpApiKey `
+    --output none
 
-    Remove-Item $bodyFile -ErrorAction SilentlyContinue
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to create connection '$connectionName'"
-    }
-    Write-Host "  [OK] Connection '$connectionName' created" -ForegroundColor Green
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to deploy MCP connection '$connectionName'"
 }
+Write-Host "  [OK] Connection '$connectionName' deployed" -ForegroundColor Green
 
 # Verify YARP proxy is running
 Write-Host "`nVerifying YARP proxy pod..." -ForegroundColor Yellow
