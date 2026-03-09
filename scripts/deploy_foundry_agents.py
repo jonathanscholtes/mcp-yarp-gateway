@@ -21,12 +21,12 @@ Usage:
 Options:
     --mcp-proxy-url     Full MCP endpoint on the YARP proxy, e.g.
                         http://yarp-proxy.mcp-tools.svc.cluster.local/mcp
-    --mcp-api-key       Value for the X-Api-Key header the proxy enforces
-    --connection-name   Name of the AI Foundry project connection that stores
-                        the proxy API key (created by Deploy-FoundryAgents.ps1).
-                        Passed directly as project_connection_id on MCPTool;
-                        Agent Service retrieves the key from the connection at
-                        runtime and injects it into MCP requests automatically.
+    --mcp-api-key       Value for the api-key header the YARP proxy enforces.
+                        Used to create the Foundry connection that MCPTool
+                        references via project_connection_id.
+    --connection-name   Name of the Foundry account connection (default:
+                        yarp-proxy-mcp). Created automatically if it does
+                        not exist.
     --cleanup           Delete existing agent versions before re-creating
 """
 
@@ -36,7 +36,7 @@ from typing import Dict
 
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import PromptAgentDefinition
+from azure.ai.projects.models import MCPTool, PromptAgentDefinition
 
 
 class AgentDeployer:
@@ -49,7 +49,7 @@ class AgentDeployer:
         model_deployment: str,
         mcp_proxy_url: str,
         mcp_api_key: str,
-        connection_name: str = "",
+        connection_name: str = "yarp-proxy-mcp",
     ):
         self.project_endpoint = project_endpoint
         self.model_deployment = model_deployment
@@ -67,12 +67,28 @@ class AgentDeployer:
 
     # ── helpers ──────────────────────────────────────────────────────────────
 
+    def _build_mcp_tool(self) -> MCPTool:
+        """Return an MCPTool pointed at the YARP proxy MCP endpoint.
+
+        project_connection_id references a Foundry account-level connection
+        that stores the api-key.  Agent Service retrieves the credential at
+        runtime and injects it into every MCP request.
+        """
+        return MCPTool(
+            server_label=self.connection_name,
+            server_url=self.mcp_proxy_url,
+            require_approval="never",
+            project_connection_id=self.connection_name,
+        )
+
     def _create_agent(self, name: str, instructions: str) -> Dict:
+        mcp_tool = self._build_mcp_tool()
         agent = self.project_client.agents.create_version(
             agent_name=name,
             definition=PromptAgentDefinition(
                 model=self.model_deployment,
                 instructions=instructions,
+                tools=[mcp_tool],
             ),
         )
         self._created.append({"name": agent.name, "version": agent.version})
@@ -281,10 +297,7 @@ database through the 'mongodb' MCP server.
         print("  Next steps")
         print(_hdr)
         print("  1. Ensure mongo-data-generator has seeded data into contracts_db")
-        print("  2. In the Foundry portal, add the MCP tool to each agent:")
-        print("       Tool type  : Remote MCP Server")
-        print("       URL        : http://<yarp-proxy-ip>/mcp")
-        print("       Connection : yarp-proxy-mcp  (Custom Keys, api-key header)")
+        print(f"  2. Connection '{self.connection_name}' is attached - agents are ready")
         print("  3. Test interactively via Notebook/01_azure_ai_agent-mcp.ipynb")
         print()
 
@@ -318,10 +331,10 @@ def main():
     parser.add_argument("--mcp-proxy-url",
         default="http://yarp-proxy.mcp-tools.svc.cluster.local/mcp",
         help="Full MCP endpoint on the YARP proxy (default: AKS in-cluster URL)")
-    parser.add_argument("--mcp-api-key", default="",
-        help="API key value (used only if --connection-name is not supplied)")
-    parser.add_argument("--connection-name", default="",
-        help="AI Foundry project connection name that stores the proxy API key")
+    parser.add_argument("--mcp-api-key", required=True,
+        help="API key for the YARP proxy (stored in the Foundry connection)")
+    parser.add_argument("--connection-name", default="yarp-proxy-mcp",
+        help="Foundry account connection name (default: yarp-proxy-mcp)")
     parser.add_argument("--cleanup", action="store_true",
         help="Delete created agent versions after deployment (useful for dev iteration)")
 
